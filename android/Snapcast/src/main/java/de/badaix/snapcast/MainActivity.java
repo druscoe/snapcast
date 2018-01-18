@@ -45,6 +45,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ListView;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -61,6 +62,7 @@ import de.badaix.snapcast.control.json.Volume;
 import de.badaix.snapcast.utils.NsdHelper;
 import de.badaix.snapcast.utils.Settings;
 import de.badaix.snapcast.utils.Setup;
+import de.badaix.snapcast.ui.DrawerListAdapter;
 
 public class MainActivity extends AppCompatActivity implements GroupItem.GroupItemListener, RemoteControl.RemoteControlListener, SnapclientService.SnapclientListener, NsdHelper.NsdHelperListener {
 
@@ -112,6 +114,9 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        ListView drawerList = (ListView) findViewById(R.id.navList);
+        DrawerListAdapter.initDrawer(this, drawerList);
 
         for (int rate : new int[]{8000, 11025, 16000, 22050, 44100, 48000}) {  // add the rates you wish to check against
             Log.d(TAG, "Samplerate: " + rate);
@@ -358,12 +363,12 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
                         warningSamplerateSnackbar.dismiss();
 
                     if ((nativeSampleRate != 0) && (nativeSampleRate != samplerate)) {
-                        warningSamplerateSnackbar = Snackbar.make(rootView,
-                                getString(R.string.wrong_sample_rate, samplerate, nativeSampleRate), Snackbar.LENGTH_INDEFINITE);
+                        String message = getString(R.string.wrong_sample_rate, samplerate, nativeSampleRate);
+                        warningSamplerateSnackbar = Snackbar.make(rootView, message, Snackbar.LENGTH_INDEFINITE);
                         warningSamplerateSnackbar.show();
                     } else if (nativeSampleRate == 0) {
-                        warningSamplerateSnackbar = Snackbar.make(rootView,
-                                getString(R.string.unknown_sample_rate), Snackbar.LENGTH_LONG);
+                        String message = getString(R.string.unknown_sample_rate);
+                        warningSamplerateSnackbar = Snackbar.make(rootView, message, Snackbar.LENGTH_LONG);
                         warningSamplerateSnackbar.show();
                     }
                 }
@@ -371,8 +376,7 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
         } else if ("err".equals(logClass) || "Emerg".equals(logClass) || "Alert".equals(logClass) || "Crit".equals(logClass) || "Err".equals(logClass)) {
             if (warningSamplerateSnackbar != null)
                 warningSamplerateSnackbar.dismiss();
-            warningSamplerateSnackbar = Snackbar.make(findViewById(R.id.drawerLayout),
-                    msg, Snackbar.LENGTH_LONG);
+            warningSamplerateSnackbar = Snackbar.make(rootView, msg, Snackbar.LENGTH_LONG);
             warningSamplerateSnackbar.show();
         }
     }
@@ -506,7 +510,7 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
 
         serverStatus.updateClient(client);
         groupListFragment.updateServer(serverStatus);
-        Snackbar mySnackbar = Snackbar.make(findViewById(R.id.drawerLayout),
+        Snackbar mySnackbar = Snackbar.make(rootView,
                 getString(R.string.client_deleted, client.getVisibleName()),
                 Snackbar.LENGTH_SHORT);
         mySnackbar.setAction(R.string.undo_string, new View.OnClickListener() {
