@@ -32,7 +32,7 @@ import android.net.nsd.NsdServiceInfo;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.design.widget.CoordinatorLayout;
+import android.support.v4.widget.DrawerLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AlertDialog;
@@ -64,10 +64,12 @@ import de.badaix.snapcast.utils.Setup;
 
 public class MainActivity extends AppCompatActivity implements GroupItem.GroupItemListener, RemoteControl.RemoteControlListener, SnapclientService.SnapclientListener, NsdHelper.NsdHelperListener {
 
+    private static final String TAG = "MainActivity";
+    private static final String SERVICE_NAME = "Snapcast";// #2";
+
     static final int CLIENT_PROPERTIES_REQUEST = 1;
     static final int GROUP_PROPERTIES_REQUEST = 2;
-    private static final String TAG = "Main";
-    private static final String SERVICE_NAME = "Snapcast";// #2";
+
     boolean bound = false;
     private MenuItem miStartStop = null;
     private MenuItem miSettings = null;
@@ -81,8 +83,7 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
     private GroupListFragment groupListFragment;
     private Snackbar warningSamplerateSnackbar = null;
     private int nativeSampleRate = 0;
-    private CoordinatorLayout coordinatorLayout;
-    private Button btnConnect = null;
+    private DrawerLayout rootView;
     private boolean batchActive = false;
 
 
@@ -128,19 +129,13 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
 //            tvInfo.setText("Sample rate: " + rate + ", buffer size: " + size);
         }
 
-        coordinatorLayout = (CoordinatorLayout) findViewById(R.id.myCoordinatorLayout);
+        rootView = (DrawerLayout) findViewById(R.id.drawerLayout);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        btnConnect = (Button) findViewById(R.id.btnConnect);
-        btnConnect.setVisibility(View.GONE);
-        // Create the adapter that will return a fragment for each of the three
-        // primary sections of the activity.
+        setActionbarSubtitle("Host: no Snapserver found");
 
         groupListFragment = (GroupListFragment) getSupportFragmentManager().findFragmentById(R.id.groupListFragment);
         groupListFragment.setHideOffline(Settings.getInstance(this).getBoolean("hide_offline", false));
-
-        setActionbarSubtitle("Host: no Snapserver found");
 
         new Thread(new Runnable() {
             @Override
@@ -363,11 +358,11 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
                         warningSamplerateSnackbar.dismiss();
 
                     if ((nativeSampleRate != 0) && (nativeSampleRate != samplerate)) {
-                        warningSamplerateSnackbar = Snackbar.make(coordinatorLayout,
+                        warningSamplerateSnackbar = Snackbar.make(rootView,
                                 getString(R.string.wrong_sample_rate, samplerate, nativeSampleRate), Snackbar.LENGTH_INDEFINITE);
                         warningSamplerateSnackbar.show();
                     } else if (nativeSampleRate == 0) {
-                        warningSamplerateSnackbar = Snackbar.make(coordinatorLayout,
+                        warningSamplerateSnackbar = Snackbar.make(rootView,
                                 getString(R.string.unknown_sample_rate), Snackbar.LENGTH_LONG);
                         warningSamplerateSnackbar.show();
                     }
@@ -376,7 +371,7 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
         } else if ("err".equals(logClass) || "Emerg".equals(logClass) || "Alert".equals(logClass) || "Crit".equals(logClass) || "Err".equals(logClass)) {
             if (warningSamplerateSnackbar != null)
                 warningSamplerateSnackbar.dismiss();
-            warningSamplerateSnackbar = Snackbar.make(findViewById(R.id.myCoordinatorLayout),
+            warningSamplerateSnackbar = Snackbar.make(findViewById(R.id.drawerLayout),
                     msg, Snackbar.LENGTH_LONG);
             warningSamplerateSnackbar.show();
         }
@@ -511,7 +506,7 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
 
         serverStatus.updateClient(client);
         groupListFragment.updateServer(serverStatus);
-        Snackbar mySnackbar = Snackbar.make(findViewById(R.id.myCoordinatorLayout),
+        Snackbar mySnackbar = Snackbar.make(findViewById(R.id.drawerLayout),
                 getString(R.string.client_deleted, client.getVisibleName()),
                 Snackbar.LENGTH_SHORT);
         mySnackbar.setAction(R.string.undo_string, new View.OnClickListener() {
