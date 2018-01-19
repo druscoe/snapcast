@@ -46,15 +46,16 @@ public class GroupItem extends LinearLayout implements SeekBar.OnSeekBarChangeLi
     private static final String TAG = "GroupItem";
 
     //    private TextView title;
+    private LinearLayout llClient;
+    private LinearLayout llVolume;
+    private TextView tvStreamName = null;
     private SeekBar volumeSeekBar;
     private ImageButton ibMute;
     private ImageButton ibSettings;
-    private LinearLayout llClient;
+
     private Group group;
     private ServerStatus server;
-    private TextView tvStreamName = null;
     private GroupItemListener listener = null;
-    private LinearLayout llVolume;
     private boolean hideOffline = false;
     private Vector<ClientItem> clientItems = null;
     private Vector<Integer> clientVolumes = null;
@@ -62,27 +63,52 @@ public class GroupItem extends LinearLayout implements SeekBar.OnSeekBarChangeLi
 
     public GroupItem(Context context, ServerStatus server, Group group) {
         super(context);
-        LayoutInflater vi = (LayoutInflater) context
-                .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        LayoutInflater vi = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         vi.inflate(R.layout.group_item, this);
 //        title = (TextView) findViewById(R.id.title);
-        volumeSeekBar = (SeekBar) findViewById(R.id.volumeSeekBar);
-        ibMute = (ImageButton) findViewById(R.id.ibMute);
-        ibMute.setImageResource(R.drawable.ic_speaker_icon);
-        ibMute.setOnClickListener(this);
-        ibSettings = (ImageButton) findViewById(R.id.ibSettings);
-        ibSettings.setOnClickListener(this);
-        llVolume = (LinearLayout) findViewById(R.id.llVolume);
-        llVolume.setVisibility(GONE);
-        llClient = (LinearLayout) findViewById(R.id.llClient);
-        llClient.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
-        tvStreamName = (TextView) findViewById(R.id.tvStreamName);
-        volumeSeekBar.setOnSeekBarChangeListener(this);
-        volumeSeekBar.setOnTouchListener(this);
+
         this.server = server;
         clientItems = new Vector<>();
         clientVolumes = new Vector<>();
+
+        llClient =      (LinearLayout) findViewById(R.id.llClient);
+        llVolume =      (LinearLayout) findViewById(R.id.llVolume);
+        tvStreamName =  (TextView) findViewById(R.id.tvStreamName);
+        volumeSeekBar = (SeekBar) findViewById(R.id.volumeSeekBar);
+        ibMute =        (ImageButton) findViewById(R.id.ibMute);
+        ibSettings =    (ImageButton) findViewById(R.id.ibSettings);
+
+        ibMute.setOnClickListener(this);
+        ibSettings.setOnClickListener(this);
+        volumeSeekBar.setOnSeekBarChangeListener(this);
+        volumeSeekBar.setOnTouchListener(this);
+
+        ibMute.setImageResource(R.drawable.ic_speaker_icon);
+        llVolume.setVisibility(GONE);
+        llClient.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT));
         setGroup(group);
+    }
+
+    private int clientCount() {
+        return clientItems.size();
+    }
+
+    private Volume getVolume(Client client) {
+        return client.getConfig().getVolume();
+    }
+
+    private Volume getVolume(ClientItem clientItem) {
+        return getVolume(clientItem.getClient());
+    }
+
+    /*
+    private Volume getVolume(Group group) {
+        return group.getConfig().getVolume();
+    }
+    */
+
+    private boolean isMuted() {
+        return group.isMuted();
     }
 
     private void update() {
@@ -99,19 +125,17 @@ public class GroupItem extends LinearLayout implements SeekBar.OnSeekBarChangeLi
             llClient.addView(clientItem);
         }
 
-        if (group.isMuted())
-            ibMute.setImageResource(R.drawable.ic_mute_icon);
-        else
-            ibMute.setImageResource(R.drawable.ic_speaker_icon);
+        ibMute.setImageResource(isMuted() ?
+            R.drawable.ic_mute_icon :
+            R.drawable.ic_speaker_icon);
 
-        if ((clientItems.size() >= 2) || ((clientItems.size() == 1) && group.isMuted()))
-            llVolume.setVisibility(VISIBLE);
-        else
-            llVolume.setVisibility(GONE);
+        llVolume.setVisibility(((clientCount() >= 2) || ((clientCount() == 1) && isMuted())) ?
+            VISIBLE :
+            GONE);
         updateVolume();
 
         Stream stream = server.getStream(group.getStreamId());
-        if ((tvStreamName == null) || (stream == null))
+        if (stream == null)
             return;
         tvStreamName.setText(stream.getName());
 /*        String codec = stream.getUri().getQuery().get("codec");
@@ -120,20 +144,20 @@ public class GroupItem extends LinearLayout implements SeekBar.OnSeekBarChangeLi
         tvStreamState.setText(stream.getUri().getQuery().get("sampleformat") + " - " + codec + " - " + stream.getStatus().toString());
 
         title.setEnabled(group.isConnected());
-        volumeSeekBar.setProgress(group.getConfig().getVolume().getPercent());
-        if (client.getConfig().getVolume().isMuted())
-            ibMute.setImageResource(R.drawable.ic_mute_icon);
-        else
-            ibMute.setImageResource(R.drawable.ic_speaker_icon);
+        volumeSeekBar.setProgress(getVolume(group).getPercent());
+
+        ibMute.setImageResource(getVolume(client).isMuted() ?
+            R.drawable.ic_mute_icon :
+            R.drawable.ic_speaker_icon);
 */
     }
 
     private void updateVolume() {
         double meanVolume = 0;
-        for (ClientItem c : clientItems) {
-            meanVolume += c.getClient().getConfig().getVolume().getPercent();
+        for (ClientItem clientItem : clientItems) {
+            meanVolume += getVolume(clientItem).getPercent();
         }
-        meanVolume /= clientItems.size();
+        meanVolume /= clientCount();
         volumeSeekBar.setProgress((int) (Math.ceil(meanVolume)));
     }
 
@@ -172,7 +196,7 @@ public class GroupItem extends LinearLayout implements SeekBar.OnSeekBarChangeLi
         else
             ratio = (double) (progress - groupVolume) / (double) (100 - groupVolume);
 
-        for (int i = 0; i < clientItems.size(); ++i) {
+        for (int i = 0; i < clientCount(); ++i) {
             ClientItem clientItem = clientItems.get(i);
             int clientVolume = clientVolumes.get(i);
             int newVolume = clientVolume;
@@ -180,7 +204,7 @@ public class GroupItem extends LinearLayout implements SeekBar.OnSeekBarChangeLi
                 newVolume -= ratio * clientVolume;
             else
                 newVolume += ratio * (100 - clientVolume);
-            Volume volume = clientItem.getClient().getConfig().getVolume();
+            Volume volume = getVolume(clientItem);
             volume.setPercent(newVolume);
             clientItem.update();
         }
@@ -193,8 +217,8 @@ public class GroupItem extends LinearLayout implements SeekBar.OnSeekBarChangeLi
     public boolean onTouch(View v, MotionEvent event) {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             clientVolumes.clear();
-            for (int i = 0; i < clientItems.size(); ++i)
-                clientVolumes.add(clientItems.get(i).getClient().getConfig().getVolume().getPercent());
+            for (ClientItem clientItem : clientItems)
+                clientVolumes.add(getVolume(clientItem).getPercent());
             groupVolume = volumeSeekBar.getProgress();
             Log.d(TAG, "onTouch: " + groupVolume);
         }
@@ -205,9 +229,9 @@ public class GroupItem extends LinearLayout implements SeekBar.OnSeekBarChangeLi
     @Override
     public void onClick(View v) {
         if (v == ibMute) {
-            group.setMuted(!group.isMuted());
+            group.setMuted(!isMuted());
             update();
-            listener.onMute(this, group.isMuted());
+            listener.onMute(this, isMuted());
         } else if (v == ibSettings) {
             listener.onPropertiesClicked(this);
         }
