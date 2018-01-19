@@ -49,17 +49,19 @@ public class ClientItem extends LinearLayout implements SeekBar.OnSeekBarChangeL
 
     public ClientItem(Context context, Client client) {
         super(context);
-        LayoutInflater vi = (LayoutInflater) context
-                .getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        LayoutInflater vi = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         vi.inflate(R.layout.client_item, this);
-        title = (TextView) findViewById(R.id.title);
+
+        title =         (TextView) findViewById(R.id.title);
         volumeSeekBar = (SeekBar) findViewById(R.id.volumeSeekBar);
-        ibMute = (ImageButton) findViewById(R.id.ibMute);
+        ibMute =        (ImageButton) findViewById(R.id.ibMute);
+        ibOverflow =    (ImageButton) findViewById(R.id.ibOverflow);
+
         ibMute.setImageResource(R.drawable.ic_speaker_icon);
         ibMute.setOnClickListener(this);
-        ibOverflow = (ImageButton) findViewById(R.id.ibOverflow);
         ibOverflow.setOnClickListener(this);
         volumeSeekBar.setOnSeekBarChangeListener(this);
+
         setClient(client);
     }
 
@@ -67,11 +69,12 @@ public class ClientItem extends LinearLayout implements SeekBar.OnSeekBarChangeL
         //Log.d(TAG, "update: " + client.getVisibleName() + ", connected: " + client.isConnected());
         title.setText(client.getVisibleName());
         title.setEnabled(client.isConnected());
-        volumeSeekBar.setProgress(client.getConfig().getVolume().getPercent());
-        if (client.getConfig().getVolume().isMuted())
-            ibMute.setImageResource(R.drawable.ic_mute_icon);
-        else
-            ibMute.setImageResource(R.drawable.ic_speaker_icon);
+
+        Volume volume = getVolume();
+        volumeSeekBar.setProgress(volume.getPercent());
+        ibMute.setImageResource(volume.isMuted() ?
+            R.drawable.ic_mute_icon : 
+            R.drawable.ic_speaker_icon);
     }
 
     public Client getClient() {
@@ -83,6 +86,10 @@ public class ClientItem extends LinearLayout implements SeekBar.OnSeekBarChangeL
         update();
     }
 
+    private Volume getVolume() {
+        return client.getConfig().getVolume();
+    }
+
     public void setListener(ClientItemListener listener) {
         this.listener = listener;
     }
@@ -90,7 +97,7 @@ public class ClientItem extends LinearLayout implements SeekBar.OnSeekBarChangeL
     @Override
     public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
         if (fromUser && (listener != null)) {
-            Volume volume = client.getConfig().getVolume();
+            Volume volume = getVolume();
             volume.setPercent(progress);
             listener.onVolumeChanged(this, volume.getPercent(), volume.isMuted());
         }
@@ -99,7 +106,7 @@ public class ClientItem extends LinearLayout implements SeekBar.OnSeekBarChangeL
     @Override
     public void onClick(View v) {
         if (v == ibMute) {
-            Volume volume = client.getConfig().getVolume();
+            Volume volume = getVolume();
             volume.setMuted(!volume.isMuted());
             update();
             listener.onVolumeChanged(this, volume.getPercent(), volume.isMuted());
