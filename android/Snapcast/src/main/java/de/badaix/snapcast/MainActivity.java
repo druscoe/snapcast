@@ -61,7 +61,6 @@ import de.badaix.snapcast.control.json.Stream;
 import de.badaix.snapcast.control.json.Volume;
 import de.badaix.snapcast.utils.NsdHelper;
 import de.badaix.snapcast.utils.Settings;
-import de.badaix.snapcast.utils.Setup;
 import de.badaix.snapcast.ui.DrawerListAdapter;
 
 public class MainActivity extends AppCompatActivity implements GroupItem.GroupItemListener, RemoteControl.RemoteControlListener, SnapclientService.SnapclientListener, NsdHelper.NsdHelperListener {
@@ -115,8 +114,19 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        rootView = (DrawerLayout) findViewById(R.id.drawerLayout);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
         ListView drawerList = (ListView) findViewById(R.id.navList);
         DrawerListAdapter.initDrawer(this, drawerList);
+
+        setActionbarSubtitle("Host: no Snapserver found");
+
+        groupListFragment = (GroupListFragment) getSupportFragmentManager().findFragmentById(R.id.groupListFragment);
+        groupListFragment.setHideOffline(Settings.getInstance(this).getBoolean("hide_offline", false));
+
+
 
         for (int rate : new int[]{8000, 11025, 16000, 22050, 44100, 48000}) {  // add the rates you wish to check against
             Log.d(TAG, "Samplerate: " + rate);
@@ -133,24 +143,6 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
 //            String size = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
 //            tvInfo.setText("Sample rate: " + rate + ", buffer size: " + size);
         }
-
-        rootView = (DrawerLayout) findViewById(R.id.drawerLayout);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
-        setActionbarSubtitle("Host: no Snapserver found");
-
-        groupListFragment = (GroupListFragment) getSupportFragmentManager().findFragmentById(R.id.groupListFragment);
-        groupListFragment.setHideOffline(Settings.getInstance(this).getBoolean("hide_offline", false));
-
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                Log.d(TAG, "copying snapclient");
-                Setup.copyBinAsset(MainActivity.this, "snapclient", "snapclient");
-                Log.d(TAG, "done copying snapclient");
-            }
-        }).start();
-
     }
 
     public void checkFirstRun() {
