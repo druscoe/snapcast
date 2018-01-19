@@ -25,13 +25,10 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.media.AudioFormat;
-import android.media.AudioManager;
-import android.media.AudioRecord;
 import android.net.nsd.NsdServiceInfo;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v4.widget.DrawerLayout;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.ActionBar;
@@ -59,6 +56,7 @@ import de.badaix.snapcast.control.json.Group;
 import de.badaix.snapcast.control.json.ServerStatus;
 import de.badaix.snapcast.control.json.Stream;
 import de.badaix.snapcast.control.json.Volume;
+import de.badaix.snapcast.utils.Audio;
 import de.badaix.snapcast.utils.NsdHelper;
 import de.badaix.snapcast.utils.Settings;
 import de.badaix.snapcast.ui.DrawerListAdapter;
@@ -85,6 +83,7 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
     private Snackbar warningSamplerateSnackbar = null;
     private int nativeSampleRate = 0;
     private DrawerLayout rootView;
+    private ActionBarDrawerToggle mDrawerToggle;
     private boolean batchActive = false;
 
 
@@ -94,8 +93,7 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
     private ServiceConnection mConnection = new ServiceConnection() {
 
         @Override
-        public void onServiceConnected(ComponentName className,
-                                       IBinder service) {
+        public void onServiceConnected(ComponentName className, IBinder service) {
             // We've bound to LocalService, cast the IBinder and get LocalService instance
             SnapclientService.LocalBinder binder = (SnapclientService.LocalBinder) service;
             snapclientService = binder.getService();
@@ -117,6 +115,7 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
         rootView = (DrawerLayout) findViewById(R.id.drawerLayout);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         ListView drawerList = (ListView) findViewById(R.id.navList);
         DrawerListAdapter.initDrawer(this, drawerList);
@@ -126,44 +125,26 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
         groupListFragment = (GroupListFragment) getSupportFragmentManager().findFragmentById(R.id.groupListFragment);
         groupListFragment.setHideOffline(Settings.getInstance(this).getBoolean("hide_offline", false));
 
-
-
-        for (int rate : new int[]{8000, 11025, 16000, 22050, 44100, 48000}) {  // add the rates you wish to check against
-            Log.d(TAG, "Samplerate: " + rate);
-            int bufferSize = AudioRecord.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_STEREO, AudioFormat.ENCODING_PCM_16BIT);
-            if (bufferSize > 0) {
-                Log.d(TAG, "Samplerate: " + rate + ", buffer: " + bufferSize);
+        mDrawerToggle = new ActionBarDrawerToggle(this, rootView, toolbar, R.string.drawer_open, R.string.drawer_closed) { 
+            @Override
+            public void onDrawerOpened(View drawerView) {
+                super.onDrawerOpened(drawerView);
+                Log.d(TAG, "onDrawerOpened: ");
             }
-        }
-
-        AudioManager audioManager = (AudioManager) this.getSystemService(Context.AUDIO_SERVICE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            String rate = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
-            nativeSampleRate = Integer.valueOf(rate);
-//            String size = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
-//            tvInfo.setText("Sample rate: " + rate + ", buffer size: " + size);
-        }
-    }
-
-    public void checkFirstRun() {
-        PackageInfo pInfo;
-        try {
-            pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
-            final int verCode = pInfo.versionCode;
-            int lastRunVersion = Settings.getInstance(this).getInt("lastRunVersion", 0);
-            Log.d(TAG, "lastRunVersion: " + lastRunVersion + ", version: " + verCode);
-            if (lastRunVersion < verCode) {
-                // Place your dialog code here to display the dialog
-                new AlertDialog.Builder(this).setTitle(R.string.first_run_title).setMessage(R.string.first_run_text).setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        Settings.getInstance(MainActivity.this).put("lastRunVersion", verCode);
-                    }
-                }).setCancelable(true).show();
+         
+            @Override
+            public void onDrawerClosed(View drawerView) {
+                super.onDrawerClosed(drawerView);
+                Log.d(TAG, "onDrawerClosed: ");
             }
-        } catch (PackageManager.NameNotFoundException e) {
-            e.printStackTrace();
-        }
+        };
+        rootView.setDrawerListener(mDrawerToggle);
+        mDrawerToggle.syncState();
+
+
+
+        Audio.logSampleRates();
+        nativeSampleRate = Audio.getNativeSampleRate(this);
     }
 
     @Override
@@ -189,6 +170,10 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
+        if (mDrawerToggle.onOptionsItemSelected(item)) {
+            return true;
+        }
+
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
@@ -293,7 +278,6 @@ public class MainActivity extends AppCompatActivity implements GroupItem.GroupIt
     public void onResume() {
         super.onResume();
         startRemoteControl();
-        checkFirstRun();
     }
 
     @Override
