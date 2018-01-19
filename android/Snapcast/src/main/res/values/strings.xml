@@ -11,7 +11,7 @@
 
     <string name="title_activity_snapcast">Snapcast</string>
 
-    <string name="drawer_open">Drawer Open</string>
+    <string name="drawer_open">Drawer Opened</string>
     <string name="drawer_closed">Drawer Closed</string>
 
     <string name="action_about">About…</string>
