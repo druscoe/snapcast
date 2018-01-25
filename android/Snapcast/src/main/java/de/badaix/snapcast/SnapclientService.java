@@ -161,7 +161,7 @@ public class SnapclientService extends Service {
                     .redirectErrorStream(true)
                     .start();
 
-            Thread reader = new Thread(new Runnable() {
+            reader = new Thread(new Runnable() {
                 @Override
                 public void run() {
                     BufferedReader bufferedReader = new BufferedReader(
